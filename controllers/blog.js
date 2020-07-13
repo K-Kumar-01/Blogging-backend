@@ -276,3 +276,30 @@ exports.listRelated = (req, res) => {
 			res.json(blogs);
 		});
 };
+
+exports.listSearch = (req, res) => {
+	const { search } = req.query;
+	if (search) {
+		Blog.find(
+			{
+				$or: [{ title: { $regex: search, $options: 'i' } }, { body: { $regex: search, $options: 'i' } }],
+			},
+			(err, blogs) => {
+				if (err) {
+					return res.status(400).json({
+						error: errorHandler(err),
+					});
+				}
+				// else if (blogs.length === 0) {
+				// 	return res.status(404).json({
+				// 		error: 'No blogs of the searched criteria found',
+				// 	});
+				// }
+				// console.log(blogs);
+				res.json(blogs);
+			}
+		).select('-photo -body');
+	} else {
+		res.status(422).json({ error: 'No search parameter found' });
+	}
+};
