@@ -267,7 +267,7 @@ exports.listRelated = (req, res) => {
 
 	Blog.find({ _id: { $ne: _id }, categories: { $in: categories } })
 		.limit(3)
-		.populate('postedBy', 'name _id profile')
+		.populate('postedBy', 'name username _id profile')
 		.select('title slug excerpt postedBy createdAt updatedAt')
 		.exec((err, blogs) => {
 			if (err || blogs.length === 0) {
