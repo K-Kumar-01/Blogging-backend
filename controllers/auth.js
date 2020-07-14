@@ -1,10 +1,12 @@
 // importing models
 const User = require('../models/user');
+const Blog = require('../models/blog');
 
 // importing packages
 const shortId = require('shortid');
 const jwt = require('jsonwebtoken');
 const expressJwt = require('express-jwt');
+const { errorHandler } = require('../helpers/dbErrorHandler');
 
 exports.read = (req, res) => {
 	req.profile.hashed_password = undefined;
@@ -101,6 +103,29 @@ exports.adminMiddleware = (req, res, next) => {
 			res.status(403).json({ error: 'Admin resource. Access denied' });
 		}
 		req.profile = user;
+		next();
+	});
+};
+
+exports.canUpdateDeleteBlog = (req, res, next) => {
+	const slug = req.params.slug.toLowerCase();
+	Blog.findOne({ slug }).exec((err, data) => {
+		if (err) {
+			return res.status(400).json({
+				error: errorHandler(err),
+			});
+		}
+		if (!data) {
+			return res.staus(404).json({
+				error: 'No blog found',
+			});
+		}
+		let authorizedUser = data.postedBy._id.toString() === req.profile._id.toString();
+		if (!authorizedUser) {
+			return res.staus(404).json({
+				error: 'You are not authorized to perform action on the blog',
+			});
+		}
 		next();
 	});
 };
