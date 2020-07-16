@@ -10,3 +10,9 @@ exports.userSigninValidator = [
 	check('email').isEmail().withMessage('Email address must be valid'),
 	check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
 ];
+
+exports.forgotPasswordValidator = [check('email').not().isEmpty().isEmail().withMessage('Email address must be valid')];
+
+exports.resetPasswordValidator = [
+	check('newPassword').not().isEmpty().isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+];

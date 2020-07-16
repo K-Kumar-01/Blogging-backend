@@ -1,12 +1,15 @@
 // importing models
 const User = require('../models/user');
 const Blog = require('../models/blog');
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // importing packages
 const shortId = require('shortid');
 const jwt = require('jsonwebtoken');
 const expressJwt = require('express-jwt');
 const { errorHandler } = require('../helpers/dbErrorHandler');
+const _ = require('lodash');
 
 exports.read = (req, res) => {
 	req.profile.hashed_password = undefined;
@@ -128,4 +131,87 @@ exports.canUpdateDeleteBlog = (req, res, next) => {
 		}
 		next();
 	});
+};
+
+exports.forgotPassword = (req, res) => {
+	const { email } = req.body;
+
+	User.findOne({ email }, (err, user) => {
+		if (err || !user) {
+			return res.status(401).json({
+				error: 'User with that email does not exist',
+			});
+		}
+
+		const token = jwt.sign({ _id: user._id }, process.env.JWT_RESET_PASSWORD, { expiresIn: '10m' });
+
+		// email
+		const emailData = {
+			to: email,
+			from: process.env.EMAIL_FROM,
+			subject: `Password reset link`,
+			html: `<p>Please use the following link to reset your password:</p>
+			<p>${process.env.CLIENT_URL}/auth/password/reset/${token}</p>
+			<hr/>
+			<p>This email may contain sensitive information</p>
+			`,
+		};
+
+		// populating the db
+		return user.update({ resetPasswordLink: token }, (err, success) => {
+			if (err) {
+				return res.json({
+					error: errorHandler(err),
+				});
+			} else {
+				sgMail
+					.send(emailData)
+					.then((sent) => {
+						return res.json({
+							message: `Email has been sent to ${email}. Follow the instructions to reset your password. Link expires in 10 min`,
+						});
+					})
+					.catch((err) => {
+						return res.json(err);
+					});
+			}
+		});
+	});
+};
+
+exports.resetPassword = (req, res) => {
+	const { resetPasswordLink, newPassword } = req.body;
+	if (resetPasswordLink) {
+		jwt.verify(resetPasswordLink, process.env.JWT_RESET_PASSWORD, (err, decoded) => {
+			if (err) {
+				return res.status(401).json({
+					error: 'Expired link. Try again ',
+				});
+			}
+			User.findOne({ resetPasswordLink }, (err, user) => {
+				if (err || !user) {
+					return res.status(401).json({
+						error: 'Something went wrong. Try again',
+					});
+				}
+				const updatedFields = {
+					password: newPassword,
+					resetPasswordLink: '',
+				};
+
+				user = _.extend(user, updatedFields);
+
+				user.save((err, result) => {
+					if (err) {
+						return res.status(400).json({
+							error: errorHandler(err),
+						});
+					}
+					res.json({
+						message: `Great! Now you can login with your new password`,
+					});
+				});
+			});
+		});
+	}
 };

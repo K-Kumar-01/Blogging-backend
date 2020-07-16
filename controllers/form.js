@@ -31,7 +31,7 @@ exports.contactForm = (req, res) => {
 exports.contactBlogAuthorForm = (req, res) => {
 	const { authorEmail, name, email, message } = req.body;
 	// let maillist = [authorEmail, process.env.EMAIL_TO];
-	let mailer = process.env.MAIL_SENDGRID;
+	let mailer = process.env.EMAIL_FROM;
 	const emailData = {
 		to: authorEmail,
 		from: mailer,
