@@ -44,29 +44,56 @@ exports.preSignup = (req, res) => {
 	});
 };
 
-exports.signup = (req, res) => {
-	User.findOne({ email: req.body.email }).exec((err, user) => {
-		if (user) {
-			return res.status(400).json({
-				error: 'Email already exists in database',
-			});
-		}
-		const { name, email, password } = req.body;
-		let username = shortId.generate();
-		let profile = `${process.env.CLIENT_URL}/profile/${username}`;
+// exports.signup = (req, res) => {
+// 	User.findOne({ email: req.body.email }).exec((err, user) => {
+// 		if (user) {
+// 			return res.status(400).json({
+// 				error: 'Email already exists in database',
+// 			});
+// 		}
+// 		const { name, email, password } = req.body;
+// 		let username = shortId.generate();
+// 		let profile = `${process.env.CLIENT_URL}/profile/${username}`;
 
-		let newUser = new User({ name, email, username, password, profile });
-		newUser.save((err, success) => {
+// 		let newUser = new User({ name, email, username, password, profile });
+// 		newUser.save((err, success) => {
+// 			if (err) {
+// 				return res.status(400).json({
+// 					error: err,
+// 				});
+// 			}
+// 			return res.json({
+// 				message: 'Signup Success!. Please signin',
+// 			});
+// 		});
+// 	});
+// };
+
+exports.signup = (req, res) => {
+	const token = req.body.token;
+	if (token) {
+		jwt.verify(token, process.env.JWT_ACCOUNT_ACTIVATION, (err, decoded) => {
 			if (err) {
-				return res.status(400).json({
-					error: err,
+				return res.status(401).json({
+					error: 'Expired link. Signup again',
 				});
 			}
-			return res.json({
-				message: 'Signup Success!. Please signin',
+			const { name, email, password } = jwt.decode(token);
+			let username = shortId.generate();
+			let profile = `${process.env.CLIENT_URL}/profile/${username}`;
+			let newUser = new User({ name, email, username, password, profile });
+			newUser.save((err, success) => {
+				if (err) {
+					return res.status(400).json({
+						error: errorHandler(err),
+					});
+				}
+				return res.json({
+					message: 'Signup Success!. Please signin',
+				});
 			});
 		});
-	});
+	}
 };
 
 exports.signin = (req, res) => {

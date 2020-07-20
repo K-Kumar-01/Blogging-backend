@@ -16,7 +16,7 @@ const {
 const { runValidation } = require('../validators/index');
 
 router.post('/pre-signup', userSignupValidator, runValidation, preSignup);
-router.post('/signup', userSignupValidator, runValidation, signup);
+router.post('/signup', signup);
 router.post('/signin', userSigninValidator, runValidation, signin);
 router.get('/signout', signout);
 router.put('/forgot-password', forgotPasswordValidator, runValidation, forgotPassword);
