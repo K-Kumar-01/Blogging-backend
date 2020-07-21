@@ -4,7 +4,16 @@ const express = require('express');
 const router = express.Router();
 
 // import controllers
-const { signup, signin, signout, requireSignin, forgotPassword,preSignup, resetPassword } = require('../controllers/auth');
+const {
+	signup,
+	signin,
+	signout,
+	requireSignin,
+	forgotPassword,
+	preSignup,
+	resetPassword,
+	googleLogin,
+} = require('../controllers/auth');
 
 // importing validators
 const {
@@ -21,5 +30,7 @@ router.post('/signin', userSigninValidator, runValidation, signin);
 router.get('/signout', signout);
 router.put('/forgot-password', forgotPasswordValidator, runValidation, forgotPassword);
 router.put('/reset-password', resetPasswordValidator, runValidation, resetPassword);
+// google login
+router.post('/google-login', googleLogin);
 
 module.exports = router;

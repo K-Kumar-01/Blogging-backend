@@ -10,6 +10,8 @@ const jwt = require('jsonwebtoken');
 const expressJwt = require('express-jwt');
 const { errorHandler } = require('../helpers/dbErrorHandler');
 const _ = require('lodash');
+const { OAuth2Client } = require('google-auth-library');
+const { response } = require('express');
 
 exports.read = (req, res) => {
 	req.profile.hashed_password = undefined;
@@ -269,4 +271,58 @@ exports.resetPassword = (req, res) => {
 			});
 		});
 	}
+};
+
+// googleLOgin
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+exports.googleLogin = (req, res) => {
+	const idToken = req.body.tokenId;
+	client
+		.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID })
+		.then((response) => {
+			const { email, jti, name, email_verified } = response.payload;
+			if (email_verified) {
+				// find the user based on email in database
+				User.findOne({ email }).exec((er, user) => {
+					if (er) {
+						console.log(er);
+						return res.json(er);
+					}
+					if (user) {
+						console.log(user);
+						const { _id, email, name, role, username } = user;
+						const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+						res.cookie('token', token, { expiresIn: '1d' });
+						return res.json({ token, user: { _id, email, name, role, username } });
+					} else {
+						let username = shortId.generate();
+						let profile = `${process.env.CLIENT_URL}/profile/${username}`;
+						let password = jti;
+						user = new User({ name, email, password, profile, username });
+						user.save((err, data) => {
+							if (err) {
+								return res.status(400).json({
+									error: errorHandler(err),
+								});
+							} else {
+								const { _id, email, name, role, username } = data;
+								const token = jwt.sign({ _id: data._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+								res.cookie('token', token, { expiresIn: '1d' });
+								return res.json({ token, user: { _id, email, name, role, username } });
+							}
+						});
+					}
+				});
+			} else {
+				return res.status(400).json({
+					error: 'Google login failed. Please try again later',
+				});
+			}
+		})
+		.catch((err) => {
+			return res.status(400).json({
+				error: 'Some error occured in google login',
+			});
+		});
 };
