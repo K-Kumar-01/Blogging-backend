@@ -290,7 +290,6 @@ exports.googleLogin = (req, res) => {
 						return res.json(er);
 					}
 					if (user) {
-						console.log(user);
 						const { _id, email, name, role, username } = user;
 						const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 						res.cookie('token', token, { expiresIn: '1d' });
